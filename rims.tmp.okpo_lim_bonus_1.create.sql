@@ -10,7 +10,7 @@ I also have to consider the rounding rules for the credit limit and the minimum 
 The values ??defined above were calculated prior to this script.*/
 
 /*******************************************************************************************************************************************************
- Autor:                     #############
+ Author:                    #############
  Purpose:                   Limit allocation (increase)
  Customer:                  #############
 --------------------------------------------------------------------------------------------------------------------------------------------------------
