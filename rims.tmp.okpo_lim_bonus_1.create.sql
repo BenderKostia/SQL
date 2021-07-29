@@ -1,29 +1,31 @@
-/* Ниже будет скрипт, который является частью большого боевого расчета кредитного лимита для группы связанных лиц VIP клиентов.
-Здесь представлена часть, как расчитано возможное увеличение кредитного лимита, исходя из рейтинга клиента (определит кому 1-му 
-предоставлять лимит), типа продукта (клиент может одновременно открыть 2 продукта паралельно и свободный лимит должен распределиться
-между ними, как 50 на 50), максимально возможной суммы лимита для клиента по каждому из продуктов (данная сумма определяется с учетом 
-скоринга клиента), максимально возможной суммы кредитного лимита, исходя из его среднемесячного по итогам его поступлений за 3 месяца. 
-Необходим цикл, т.к. рейтинги клиентов в группе и само к-во клиентов в группе может меняться ежедневно. 
-Так же стоит учесть правила округления лимита при предоставлении клиенту и минимальную планку для каждого из типов продуктов.
-В предварительной логике до данной скрипта расчитаны ряд необходимых величин, описанных выше. Осталось только распределить лимит */
+/* Below you can find a script that is part of a large combat calculation for groups of related persons who are VIP clients at the bank.
+This is part of the calculation of a possible increase in the credit limit for customers. For this operation, I have to consider the following factors:
+- client rating (who has the best rating, he will receive the limit first);
+- type of limits (there are 2 different types of products that a client can open at the same time. And a possible increase in this part, I need to divide
+between these types of products as 50% to 50%);
+- the maximum possible size of the client's credit limit for any type of product (determined by scoring);
+- the maximum possible size of the client's credit limit, calculated on the basis of his average monthly turnover;
+The cycle is necessary because customer ratings and the number of customers in groups can change every day.
+I also have to consider the rounding rules for the credit limit and the minimum amount level for each type of product.
+The values ??defined above were calculated prior to this script.*/
 
 /*******************************************************************************************************************************************************
- Автор:                     Бондаренко К.В.
- Цель:                      Распределение лимита (увеличение)
- Заказчик:                  #############
+ Autor:                     #############
+ Purpose:                   Limit allocation (increase)
+ Customer:                  #############
 --------------------------------------------------------------------------------------------------------------------------------------------------------
- Сервер выполнения:         ############# / тип DB: Sybase IQ             
+ Server:                    ############# / DB type: Sybase IQ             
 --------------------------------------------------------------------------------------------------------------------------------------------------------
- Таблица для выгрузки:      tmp.okpo_lim_bonus_1 / tmp.gr_num_free_limit
+ Export table:              tmp.okpo_lim_bonus_1 / tmp.gr_num_free_limit
 --------------------------------------------------------------------------------------------------------------------------------------------------------
- Периодичность выполнения:  регламент #############
+ Execution frequency:       every day
 --------------------------------------------------------------------------------------------------------------------------------------------------------
- Примечания:                1. Дата реализации    - 11.02.2020
-                            2. Карточка документа - #############
-                            3. Карточка документа - #############
+ Notes:                     1. Day of release     - 11.02.2020
+                            2. Document number    - #############
+                            3. Document number    - #############
                             4. Jira               - #############
 *******************************************************************************************************************************************************/
--- Выбираем группы со свободным лимитом
+-- Choosing groups with a free limit
 drop table if exists tmp.gr_num_free_limit; commit;
 
 select t1.gr_num,
@@ -36,7 +38,7 @@ select t1.gr_num,
 commit;
 create HG index gr_num_HG on tmp.gr_num_free_limit (gr_num);
 
--- ОКПО из групп на снижение 
+-- Institutions from groups for reduction
 drop table if exists tmp.okpo_down_group_; commit;
 
 select distinct 
@@ -49,7 +51,7 @@ select distinct
 commit;
 create LF index okpo_LF on tmp.okpo_down_group_ (okpo); 
 
--- Выбираем ОКПО с возможностью увеличения
+-- Choosing institutions with the possibility of increasing
 drop table if exists tmp.okpo_lim_bonus_1;commit;
 
 select t1.gr_num,
@@ -89,7 +91,7 @@ commit;
 create HG index gr_num_HG on tmp.okpo_lim_bonus_1 (gr_num);
 create HG index okpo_HG   on tmp.okpo_lim_bonus_1 (okpo);
 
--- Обновляем поля необходимых лимитов
+-- Updating the fields of the required limits
 update tmp.okpo_lim_bonus_1
    set t1.NEED_LVF = t2.FIN_CALC_LVF - t2.LVF_Q9PB
   from tmp.okpo_lim_bonus_1 as t1
@@ -110,7 +112,7 @@ update tmp.okpo_lim_bonus_1
 ;
 commit;
 
--- Выбираем клиентов, которых нужно исключить из распределения в виду недостаточности свободного лимита для минимального лимита по LVF
+-- We select clients who need to be excluded from the distribution due to insufficient free limit for the minimum LVF limit
 select t1.okpo
   into #okpo_lvf_del
   from tmp.okpo_lim_bonus_1 as t1
@@ -135,7 +137,7 @@ create LF index okpo_LF on #okpo_lvf_del(okpo);
 
   
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
--- Распределение лимита
+-- Limit allocation
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
 create variable @RaitStartDown int;
 create variable @RaitEndDown   int;
@@ -278,7 +280,7 @@ update tmp.okpo_lim_bonus_1
 ;
 commit;
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
--- Обновление оставшегося лимита
+-- Updating the remaining limit
 update tmp.gr_num_free_limit
    set t2.LIMIT_REST = t2.LIMIT_REST - (t1.BONUS_LVF + t1.BONUS_GLP)
   from tmp.okpo_lim_bonus_1  as t1
@@ -293,4 +295,4 @@ end
 ;
 commit;
 ---------------------------------------------------------------------------------------------------------------------------------------------------------
--- Конец скрипта
+-- End of script
